@@ -1,0 +1,310 @@
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Weather Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .mood-input {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .mood-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .mood-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .mood-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .mood-emoji {
+            font-size: 30px;
+        }
+
+        .weather-animation {
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .cloud, .rain, .sun, .rainbow {
+            position: absolute;
+            transition: all 0.5s ease;
+        }
+
+        .mood-history {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notes-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes rain {
+            0% { transform: translateY(-10px); }
+            100% { transform: translateY(200px); }
+        }
+
+        @keyframes shine {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Mood Weather Dashboard</h1>
+            <p>How are you feeling today?</p>
+        </div>
+
+        <div class="mood-input">
+            <div class="weather-animation" id="weatherAnimation"></div>
+            <input type="text" class="notes-input" placeholder="Add notes about your day..." id="moodNotes">
+            <div class="mood-options">
+                <button class="mood-btn" data-mood="happy">
+                    <span class="mood-emoji">☀️</span>
+                    Happy
+                </button>
+                <button class="mood-btn" data-mood="calm">
+                    <span class="mood-emoji">🌤️</span>
+                    Calm
+                </button>
+                <button class="mood-btn" data-mood="sad">
+                    <span class="mood-emoji">🌧️</span>
+                    Sad
+                </button>
+                <button class="mood-btn" data-mood="energetic">
+                    <span class="mood-emoji">⚡</span>
+                    Energetic
+                </button>
+            </div>
+        </div>
+
+        <div class="mood-history" id="moodHistory">
+            <!-- Mood history will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        class MoodTracker {
+            constructor() {
+                this.moods = [];
+                this.loadMoods();
+                this.initializeEventListeners();
+            }
+
+            loadMoods() {
+                const savedMoods = localStorage.getItem('moodHistory');
+                this.moods = savedMoods ? JSON.parse(savedMoods) : [];
+                this.updateMoodHistory();
+            }
+
+            saveMoods() {
+                localStorage.setItem('moodHistory', JSON.stringify(this.moods));
+            }
+
+            addMood(mood, notes) {
+                const timestamp = new Date().toLocaleString();
+                this.moods.unshift({ mood, notes, timestamp });
+                this.saveMoods();
+                this.updateMoodHistory();
+                this.updateWeatherAnimation(mood);
+            }
+
+            updateMoodHistory() {
+                const historyContainer = document.getElementById('moodHistory');
+                historyContainer.innerHTML = this.moods.map(entry => `
+                    <div class="history-item">
+                        <div>
+                            <strong>${this.getMoodEmoji(entry.mood)} ${entry.mood}</strong>
+                            <p>${entry.notes}</p>
+                        </div>
+                        <small>${entry.timestamp}</small>
+                    </div>
+                `).join('');
+            }
+
+            getMoodEmoji(mood) {
+                const emojis = {
+                    happy: '☀️',
+                    calm: '🌤️',
+                    sad: '🌧️',
+                    energetic: '⚡'
+                };
+                return emojis[mood] || '❓';
+            }
+
+            updateWeatherAnimation(mood) {
+                const container = document.getElementById('weatherAnimation');
+                container.innerHTML = '';
+
+                switch(mood) {
+                    case 'happy':
+                        this.createSunnyAnimation(container);
+                        break;
+                    case 'calm':
+                        this.createCalmAnimation(container);
+                        break;
+                    case 'sad':
+                        this.createRainyAnimation(container);
+                        break;
+                    case 'energetic':
+                        this.createEnergeticAnimation(container);
+                        break;
+                }
+            }
+
+            createSunnyAnimation(container) {
+                const sun = document.createElement('div');
+                sun.innerHTML = '☀️';
+                sun.style.cssText = `
+                    position: absolute;
+                    font-size: 50px;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    animation: shine 2s infinite;
+                `;
+                container.appendChild(sun);
+            }
+
+            createRainyAnimation(container) {
+                for(let i = 0; i < 10; i++) {
+                    const raindrop = document.createElement('div');
+                    raindrop.innerHTML = '💧';
+                    raindrop.style.cssText = `
+                        position: absolute;
+                        left: ${Math.random() * 100}%;
+                        animation: rain 1s infinite linear;
+                        animation-delay: ${Math.random()}s;
+                    `;
+                    container.appendChild(raindrop);
+                }
+            }
+
+            createCalmAnimation(container) {
+                const cloud = document.createElement('div');
+                cloud.innerHTML = '☁️';
+                cloud.style.cssText = `
+                    position: absolute;
+                    font-size: 40px;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    animation: float 3s infinite ease-in-out;
+                `;
+                container.appendChild(cloud);
+            }
+
+            createEnergeticAnimation(container) {
+                for(let i = 0; i < 5; i++) {
+                    const spark = document.createElement('div');
+                    spark.innerHTML = '⚡';
+                    spark.style.cssText = `
+                        position: absolute;
+                        font-size: 30px;
+                        left: ${Math.random() * 100}%;
+                        top: ${Math.random() * 100}%;
+                        animation: shine 0.5s infinite;
+                        animation-delay: ${Math.random()}s;
+                    `;
+                    container.appendChild(spark);
+                }
+            }
+
+            initializeEventListeners() {
+                document.querySelectorAll('.mood-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const mood = button.dataset.mood;
+                        const notes = document.getElementById('moodNotes').value;
+                        this.addMood(mood, notes);
+                        document.getElementById('moodNotes').value = '';
+                    });
+                });
+            }
+        }
+
+        // Initialize the mood tracker
+        const moodTracker = new MoodTracker();
+    </script>
+</body>
+</html>
